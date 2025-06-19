@@ -308,14 +308,14 @@
                     deckRemaining = data.deckRemaining || [];
                     allCardDefinitions = data.allCardDefinitions || initialAllCards;
                 } else {
-                    // If the document is deleted by another client, re-initialize
+                    // If the document is deleted by another client or doesn't exist, re-initialize
                     initializeGameData(); 
                 }
                 window.loading = false; // <<< --- Crucial: Set loading to false once data is received
                 window.renderApp(); // Re-render with real-time updates
             }, (error) => {
                 console.error("Error listening to game data:", error);
-                errorMessage = 'Failed to get real-time game updates.';
+                errorMessage = 'Failed to get real-time game updates. Please check console for details.';
                 window.loading = false; // Also set false on error
                 window.renderApp();
             });
@@ -327,7 +327,9 @@
             const appRoot = document.getElementById('app-root');
             appRoot.innerHTML = ''; // Clear previous content
 
-            if (window.loading) { // Use window.loading for the check
+            // Only show loading spinner if window.loading is true AND we are in Hider mode
+            // or if we are in initial app loading state (gameMode is null)
+            if (window.loading && (gameMode === 'hider' || gameMode === null)) { 
                 appRoot.innerHTML = `
                     <div class="min-h-screen flex items-center justify-center bg-gray-900 text-white p-4">
                         <div class="flex flex-col items-center">
@@ -376,34 +378,24 @@
                         if (!docSnap.exists()) {
                             await initializeGameData(); // Initialize if not found
                         }
-                        // After initial data is confirmed/initialized, fetch it locally one more time
-                        // to ensure the latest state is captured before setting up the listener
-                        const updatedDocSnap = await getDoc(gameDocRef);
-                        if (updatedDocSnap.exists()) {
-                            const data = updatedDocSnap.data();
-                            cardsInHand = data.cardsInHand || [];
-                            deckRemaining = data.deckRemaining || [];
-                            allCardDefinitions = data.allCardDefinitions || initialAllCards;
-                        } else {
-                            // Should not happen if initializeGameData just ran, but safety net
-                            console.warn("Game data document not found after initialization attempt.");
-                            cardsInHand = [];
-                            deckRemaining = [];
-                        }
                     } catch (error) {
                         console.error("Error fetching initial game data:", error);
                         errorMessage = 'Failed to load initial game data. Please refresh.';
+                        window.loading = false; // Ensure loading is off if initial fetch fails
+                        window.renderApp();
                     } finally {
-                        // Crucial: Do NOT set window.loading = false here.
-                        // It will be set to false by setupHiderListener's onSnapshot callback
-                        // once the actual data stream begins.
-                        setupHiderListener(); // Attach the real-time listener
-                        // No explicit renderApp here. The onSnapshot listener's callback will handle the initial render.
+                        // Crucial: setupHiderListener will now handle setting window.loading to false
+                        setupHiderListener(); // Attach the real-time listener (which also renders initially)
                     }
                 });
 
                 document.getElementById('seeker-button').addEventListener('click', () => {
                     gameMode = 'seeker';
+                    // Unsubscribe Hider listener if it was active
+                    if (unsubscribeHiderListener) {
+                        unsubscribeHiderListener();
+                        unsubscribeHiderListener = null;
+                    }
                     window.renderApp(); 
                 });
                 return;
