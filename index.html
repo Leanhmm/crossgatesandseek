@@ -159,6 +159,13 @@
                     deckRemaining: shuffledDeck,
                     allCardDefinitions: initialAllCards,
                 }, { merge: true });
+
+                // --- IMPORTANT FIX: Update local state immediately after successful Firestore write
+                cardsInHand = [];
+                deckRemaining = shuffledDeck;
+                allCardDefinitions = initialAllCards; // Ensure local definitions are up-to-date
+                // --- END IMPORTANT FIX
+
                 errorMessage = ''; // Clear error on success
             } catch (error) {
                 console.error("Error initializing game data:", error);
@@ -236,6 +243,13 @@
                     deckRemaining: shuffledDeck,
                     allCardDefinitions: allCardDefinitions,
                 }, { merge: true });
+
+                // --- IMPORTANT FIX: Update local state immediately after successful Firestore write
+                cardsInHand = [];
+                deckRemaining = shuffledDeck;
+                // allCardDefinitions is already the latest, so no need to re-assign here
+                // --- END IMPORTANT FIX
+
                 errorMessage = ''; // Clear previous error
             } catch (error) {
                 console.error("Error resetting game:", error);
