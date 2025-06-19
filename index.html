@@ -1,662 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hide & Seek Game</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDKs -->
-    <script type="module">
-        // Import Firebase modules from CDN
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, where, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-        // Global variables for Firebase instances and functions
-        window.app = null;
-        window.db = null;
-        window.auth = null;
-        window.currentUserId = null;
-        window.loading = true; 
-
-        // Make Firestore functions globally accessible
-        window.firebaseDoc = doc;
-        window.firebaseGetDoc = getDoc;
-        window.firebaseSetDoc = setDoc;
-        window.firebaseUpdateDoc = updateDoc;
-        window.firebaseOnSnapshot = onSnapshot;
-        // Also exposing these for completeness, though not strictly used in current error context
-        window.firebaseCollection = collection;
-        window.firebaseQuery = query;
-        window.firebaseWhere = where;
-        window.firebaseAddDoc = addDoc;
-        window.firebaseGetDocs = getDocs;
-
-
-        // Ensure global Firebase config and app ID are accessible
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // Initialize Firebase when the script loads
-        try {
-            window.app = initializeApp(firebaseConfig);
-            window.db = getFirestore(window.app);
-            window.auth = getAuth(window.app);
-
-            // Set up authentication listener
-            onAuthStateChanged(window.auth, async (user) => {
-                if (!user) {
-                    try {
-                        if (initialAuthToken) {
-                            await signInWithCustomToken(window.auth, initialAuthToken);
-                        } else {
-                            await signInAnonymously(window.auth);
-                        }
-                    } catch (error) {
-                        console.error('Firebase authentication error:', error);
-                        // Optionally display error to user
-                    }
-                }
-                window.currentUserId = window.auth.currentUser?.uid || crypto.randomUUID();
-                // Set loading to false once authentication is complete, regardless of game mode
-                window.loading = false; 
-                // After auth, render the app
-                if (typeof window.renderApp === 'function') {
-                    window.renderApp();
-                }
-            });
-        } catch (error) {
-            console.error('Firebase initialization failed:', error);
-            // Optionally display error to user
-            window.loading = false; // Also set false on init failure
-        }
-    </script>
-    <style>
-        /* Custom styles for select arrow */
-        select {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            background-size: 1.5em 1.5em;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hide and Seek at the Mall</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
+    }
+    .card {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      margin: 10px;
+      display: inline-block;
+    }
+    .button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
 </head>
-<body class="bg-gray-900 text-white font-sans antialiased min-h-screen flex flex-col items-center justify-center p-4">
+<body>
+  <div id="main">
+    <h1>Hide and Seek at the Mall</h1>
+    <button class="button" onclick="goToRole('hider')">I'm a Hider</button>
+    <button class="button" onclick="goToRole('seeker')">I'm a Seeker</button>
+  </div>
 
-    <!-- Main content container -->
-    <div id="app-root" class="w-full flex flex-col items-center justify-center">
-        <!-- Content will be rendered here by JavaScript -->
-    </div>
+  <div id="hiderPage" style="display: none;">
+    <h2>Hider Mode</h2>
+    <button class="button" onclick="drawCard()">Draw 1 Card</button>
+    <button class="button" onclick="drawThreeChooseOne()">Draw 3 Cards, Choose 1</button>
+    <h3>Your Hand:</h3>
+    <div id="hand"></div>
+  </div>
 
-    <script>
-        // Define the initial set of all available cards with placeholders.
-        const initialAllCards = [
-            { id: 'card1', title: 'Card 1 Title', description: 'Description for Card 1' },
-            { id: 'card2', title: 'Card 2 Title', description: 'Description for Card 2' },
-            { id: 'card3', title: 'Card 3 Title', description: 'Description for Card 3' },
-            { id: 'card4', title: 'Card 4 Title', description: 'Description for 4' },
-            { id: 'card5', title: 'Card 5 Title', description: 'Description for Card 5' },
-            { id: 'card6', title: 'Card 6 Title', description: 'Description for Card 6' },
-            { id: 'card7', title: 'Card 7 Title', description: 'Description for Card 7' },
-            { id: 'card8', title: 'Card 8 Title', description: 'Description for Card 8' },
-            { id: 'card9', title: 'Card 9 Title', description: 'Description for Card 9' },
-            { id: 'card10', title: 'Card 10 Title', description: 'Description for Card 10' },
-            { id: 'card11', title: 'Card 11 Title', description: 'Description for Card 11' },
-            { id: 'card12', title: 'Card 12 Title', description: 'Description for Card 12' },
-        ];
+  <div id="seekerPage" style="display: none;">
+    <h2>Seeker Mode</h2>
+    <!-- Blank for now -->
+  </div>
 
-        const locationOptions = [
-            "Place that sells food",
-            "Jewelry Store",
-            "Shoe Store",
-            "Bathroom",
-            "Escalator",
-            "Entertainment Establishment",
-            "Mall Entrance",
-        ];
+  <script>
+    const allCards = [
+      "Speed Boost",
+      "Invisible Cloak",
+      "Decoy",
+      "Mall Map",
+      "Time Freeze"
+    ];
 
-        // Global state variables
-        let cardsInHand = [];
-        let deckRemaining = [];
-        let allCardDefinitions = initialAllCards;
-        // `loading` is managed by the module script, refer to `window.loading`
-        let errorMessage = '';
-        let showConfirmation = false;
-        let cardToPlay = null;
-        let gameMode = null; // 'hider', 'seeker', or null (for selection screen)
+    const hand = [];
 
-        // Seeker state variables
-        let template1Option1 = locationOptions[0];
-        let template1Option2 = locationOptions[0];
-        let template2Question = '';
-        let template3Question = '';
-        let template4Question = '';
-        let template5Question = '';
-        let generatedQuestion = '';
+    function goToRole(role) {
+      document.getElementById('main').style.display = 'none';
+      if (role === 'hider') {
+        document.getElementById('hiderPage').style.display = 'block';
+      } else if (role === 'seeker') {
+        document.getElementById('seekerPage').style.display = 'block';
+      }
+    }
 
-        // Global variable to store unsubscribe function for Firestore listener
-        let unsubscribeHiderListener = null;
+    function drawCard() {
+      const card = getRandomCard();
+      hand.push(card);
+      renderHand();
+    }
 
-
-        // Helper function to get card definition from its ID
-        function getCardDefinition(cardId) {
-            return allCardDefinitions.find(card => card.id === cardId);
-        }
-
-        // Function to shuffle an array
-        function shuffleArray(array) {
-            let currentIndex = array.length, randomIndex;
-            while (currentIndex !== 0) {
-                randomIndex = Math.floor(Math.random() * currentIndex);
-                currentIndex--;
-                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
-            }
-            return array;
-        }
-
-        // Initialize game data in Firestore
-        async function initializeGameData() {
-            if (!window.db) {
-                errorMessage = 'Database not initialized.';
-                window.renderApp(); 
-                return;
-            }
-
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const gameDocRef = window.firebaseDoc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame'); // Use window.firebaseDoc
-            try {
-                const shuffledDeck = shuffleArray([...initialAllCards.map(card => card.id)]);
-                await window.firebaseSetDoc(gameDocRef, { // Use window.firebaseSetDoc
-                    cardsInHand: [],
-                    deckRemaining: shuffledDeck,
-                    allCardDefinitions: initialAllCards,
-                }, { merge: true });
-
-                // Update local state immediately after successful Firestore write
-                cardsInHand = [];
-                deckRemaining = shuffledDeck;
-                allCardDefinitions = initialAllCards; // Ensure local definitions are up-to-date
-
-                errorMessage = ''; // Clear error on success
-            } catch (error) {
-                console.error("Error initializing game data:", error);
-                errorMessage = 'Failed to initialize game data.';
-            } finally {
-                // Do not render here, render is handled by the caller after init/fetch
-            }
-        }
-
-        // Handle drawing a new card
-        async function handleDrawCard() {
-            if (!window.db || window.loading) return; 
-
-            if (deckRemaining.length === 0) {
-                errorMessage = "No cards left in the deck! Reset the game to reshuffle.";
-                window.renderApp();
-                return;
-            }
-
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const gameDocRef = window.firebaseDoc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame'); // Use window.firebaseDoc
-            try {
-                const currentDeck = [...deckRemaining];
-                const currentHand = [...cardsInHand];
-
-                const drawnCardId = currentDeck.splice(Math.floor(Math.random() * currentDeck.length), 1)[0];
-                const drawnCardDef = getCardDefinition(drawnCardId);
-
-                if (drawnCardDef) {
-                    currentHand.push(drawnCardId);
-                    await window.firebaseUpdateDoc(gameDocRef, { // Use window.firebaseUpdateDoc
-                        cardsInHand: currentHand,
-                        deckRemaining: currentDeck,
-                    });
-                    errorMessage = ''; // Clear previous error
-                } else {
-                    errorMessage = "Drawn card definition not found.";
-                }
-            } catch (error) {
-                console.error("Error drawing card:", error);
-                errorMessage = 'Failed to draw a card.';
-            } finally {
-                window.renderApp(); 
-            }
-        }
-
-        // Handle playing a card (removes it from hand)
-        async function handlePlayCard(id) {
-            if (!window.db || window.loading) return; 
-
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const gameDocRef = window.firebaseDoc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame'); // Use window.firebaseDoc
-            try {
-                const updatedHand = cardsInHand.filter(cardId => cardId !== id);
-                await window.firebaseUpdateDoc(gameDocRef, { cardsInHand: updatedHand }); // Use window.firebaseUpdateDoc
-                errorMessage = ''; // Clear previous error
-            } catch (error) {
-                console.error("Error playing card:", error);
-                errorMessage = 'Failed to play card.';
-            } finally {
-                window.renderApp(); 
-            }
-        }
-
-        // Reset the game (clear hand, reshuffle deck)
-        async function handleResetGame() {
-            if (!window.db || window.loading) return; 
-
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const gameDocRef = window.firebaseDoc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame'); // Use window.firebaseDoc
-            try {
-                const shuffledDeck = shuffleArray([...allCardDefinitions.map(card => card.id)]);
-                await window.firebaseSetDoc(gameDocRef, { // Use window.firebaseSetDoc
-                    cardsInHand: [],
-                    deckRemaining: shuffledDeck,
-                    allCardDefinitions: allCardDefinitions,
-                }, { merge: true });
-
-                // Update local state immediately after successful Firestore write
-                cardsInHand = [];
-                deckRemaining = shuffledDeck;
-                // allCardDefinitions is already the latest, so no need to re-assign here
-
-                errorMessage = ''; // Clear previous error
-            } catch (error) {
-                console.error("Error resetting game:", error);
-                errorMessage = 'Failed to reset game.';
-            } finally {
-                window.renderApp(); 
-            }
-        }
-
-        // Seeker question generation logic
-        function handleGenerateQuestion(templateNum) {
-            let question = "";
-            switch (templateNum) {
-                case 1:
-                    question = `Is your nearest ${template1Option1} the same as my nearest ${template1Option2}?`;
-                    break;
-                case 2:
-                    question = template2Question;
-                    break;
-                case 3:
-                    question = template3Question;
-                    break;
-                case 4:
-                    question = template4Question;
-                    break;
-                case 5:
-                    question = template5Question;
-                    break;
-                default:
-                    question = "Please select a valid template.";
-            }
-            generatedQuestion = question;
-            window.renderApp(); 
-        }
-
-        // Function to set up the Firestore listener for Hider data
-        function setupHiderListener() {
-            // Unsubscribe any existing listener before setting a new one
-            if (unsubscribeHiderListener) {
-                unsubscribeHiderListener(); 
-                unsubscribeHiderListener = null;
-            }
-            // Ensure we have db and userId before attempting to set up listener
-            if (!window.db || !window.currentUserId) {
-                errorMessage = 'Firebase not fully initialized. Please try again or refresh.';
-                window.loading = false;
-                window.renderApp();
-                return;
-            }
-
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const gameDocRef = window.firebaseDoc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame'); // Use window.firebaseDoc
-
-            unsubscribeHiderListener = window.firebaseOnSnapshot(gameDocRef, async (docSnap) => { // Use window.firebaseOnSnapshot
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    cardsInHand = data.cardsInHand || [];
-                    deckRemaining = data.deckRemaining || [];
-                    allCardDefinitions = data.allCardDefinitions || initialAllCards;
-                } else {
-                    // If the document doesn't exist, initialize it
-                    await initializeGameData(); // Await initialization
-                }
-                window.loading = false; // <<< --- Crucial: Set loading to false once data is received
-                window.renderApp(); // Re-render with real-time updates
-            }, (error) => {
-                console.error("Error listening to game data:", error);
-                errorMessage = 'Failed to get real-time game updates. Please check console for details.';
-                window.loading = false; // Also set false on error
-                window.renderApp();
-            });
-        }
-
-
-        // Main render function for the application
-        window.renderApp = function() {
-            const appRoot = document.getElementById('app-root');
-            appRoot.innerHTML = ''; // Clear previous content
-
-            // Only show loading spinner if window.loading is true AND we are in Hider mode
-            // or if we are in initial app loading state (gameMode is null)
-            if (window.loading && (gameMode === 'hider' || gameMode === null)) { 
-                appRoot.innerHTML = `
-                    <div class="min-h-screen flex items-center justify-center bg-gray-900 text-white p-4">
-                        <div class="flex flex-col items-center">
-                            <svg class="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <p class="mt-4 text-lg">Loading game data...</p>
-                            ${errorMessage ? `<p class="text-red-400 text-sm mt-2">${errorMessage}</p>` : ''}
-                        </div>
-                    </div>
-                `;
-                return;
-            }
-
-            if (gameMode === null) {
-                // Role Selection Screen
-                appRoot.innerHTML = `
-                    <div class="min-h-screen bg-gray-900 text-white font-inter flex flex-col items-center justify-center p-4">
-                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-12 text-center text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500 drop-shadow-lg">
-                            Hide & Seek: Role Selection
-                        </h1>
-                        <div class="flex flex-col sm:flex-row gap-8">
-                            <button id="hider-button" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-10 rounded-full transition duration-300 ease-in-out shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 transform hover:scale-105 text-xl">
-                                I am a Hider
-                            </button>
-                            <button id="seeker-button" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-10 rounded-full transition duration-300 ease-in-out shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-75 transform hover:scale-105 text-xl">
-                                I am a Seeker
-                            </button>
-                        </div>
-                        <p class="text-gray-400 mt-8 text-center text-sm sm:text-base">
-                            Your user ID: <span class="font-mono text-xs sm:text-sm bg-gray-800 px-2 py-1 rounded-md break-all">${window.currentUserId}</span>
-                        </p>
-                    </div>
-                `;
-                // Attach event listeners
-                document.getElementById('hider-button').addEventListener('click', async () => {
-                    gameMode = 'hider';
-                    window.loading = true; // Show loading spinner temporarily for Hider data
-                    window.renderApp(); // Render the loading state immediately
-
-                    // Add a small delay to ensure the DOM has updated with the loading spinner
-                    // before attempting to set up Firebase listeners.
-                    setTimeout(() => {
-                        setupHiderListener();
-                    }, 50); // Small delay
-                });
-
-                document.getElementById('seeker-button').addEventListener('click', () => {
-                    gameMode = 'seeker';
-                    // Unsubscribe Hider listener if it was active
-                    if (unsubscribeHiderListener) {
-                        unsubscribeHiderListener();
-                        unsubscribeHiderListener = null;
-                    }
-                    window.renderApp(); 
-                });
-                return;
-            }
-
-            if (gameMode === 'seeker') {
-                // Seeker UI
-                appRoot.innerHTML = `
-                    <div class="min-h-screen bg-gray-900 text-white font-inter flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
-                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 drop-shadow-lg">
-                            Seeker Question Generator
-                        </h1>
-                        <p class="text-gray-400 mb-6 text-center text-sm sm:text-base">
-                            Your user ID: <span class="font-mono text-xs sm:text-sm bg-gray-800 px-2 py-1 rounded-md break-all">${window.currentUserId}</span>
-                        </p>
-
-                        <div class="w-full max-w-4xl bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-8 mb-8">
-                            <h2 class="text-2xl font-bold mb-6 text-orange-300 text-center">Question Templates</h2>
-
-                            <!-- Template 1 -->
-                            <div class="mb-6 p-4 bg-gray-700 rounded-lg shadow-md">
-                                <label for="template1-option1" class="block text-lg font-semibold mb-2 text-white">
-                                    Template 1: Is your nearest <span class="text-orange-300">___</span> the same as my nearest <span class="text-orange-300">___</span>?
-                                </label>
-                                <div class="flex flex-col sm:flex-row gap-4 mb-4">
-                                    <select id="template1-option1-select" class="flex-1 bg-gray-600 text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400">
-                                        ${locationOptions.map(opt => `<option value="${opt}" ${template1Option1 === opt ? 'selected' : ''}>${opt}</option>`).join('')}
-                                    </select>
-                                    <select id="template1-option2-select" class="flex-1 bg-gray-600 text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400">
-                                        ${locationOptions.map(opt => `<option value="${opt}" ${template1Option2 === opt ? 'selected' : ''}>${opt}</option>`).join('')}
-                                    </select>
-                                </div>
-                                <button id="generate-q1-button" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-75">
-                                    Generate Question 1
-                                </button>
-                            </div>
-
-                            <!-- Template 2 -->
-                            <div class="mb-6 p-4 bg-gray-700 rounded-lg shadow-md">
-                                <label for="template2-input" class="block text-lg font-semibold mb-2 text-white">
-                                    Template 2: General Question
-                                </label>
-                                <input id="template2-input" type="text" value="${template2Question}" placeholder="e.g., Are you inside a building?" class="w-full bg-gray-600 text-white p-3 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-orange-400">
-                                <button id="generate-q2-button" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-75">
-                                    Generate Question 2
-                                </button>
-                            </div>
-
-                            <!-- Template 3 -->
-                            <div class="mb-6 p-4 bg-gray-700 rounded-lg shadow-md">
-                                <label for="template3-input" class="block text-lg font-semibold mb-2 text-white">
-                                    Template 3: Location Specific
-                                </label>
-                                <input id="template3-input" type="text" value="${template3Question}" placeholder="e.g., Are you on the ground floor?" class="w-full bg-gray-600 text-white p-3 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-orange-400">
-                                <button id="generate-q3-button" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-75">
-                                    Generate Question 3
-                                </button>
-                            </div>
-
-                            <!-- Template 4 -->
-                            <div class="mb-6 p-4 bg-gray-700 rounded-lg shadow-md">
-                                <label for="template4-input" class="block text-lg font-semibold mb-2 text-white">
-                                    Template 4: Environment Clue
-                                </label>
-                                <input id="template4-input" type="text" value="${template4Question}" placeholder="e.g., Is there water nearby?" class="w-full bg-gray-600 text-white p-3 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-orange-400">
-                                <button id="generate-q4-button" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-75">
-                                    Generate Question 4
-                                </button>
-                            </div>
-
-                            <!-- Template 5 -->
-                            <div class="mb-6 p-4 bg-gray-700 rounded-lg shadow-md">
-                                <label for="template5-input" class="block text-lg font-semibold mb-2 text-white">
-                                    Template 5: Custom Question
-                                </label>
-                                <input id="template5-input" type="text" value="${template5Question}" placeholder="Type your own question here..." class="w-full bg-gray-600 text-white p-3 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-orange-400">
-                                <button id="generate-q5-button" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-75">
-                                    Generate Question 5
-                                </button>
-                            </div>
-
-                            ${generatedQuestion ? `
-                                <div class="mt-8 p-4 bg-teal-700 rounded-lg shadow-inner text-center">
-                                    <h3 class="text-xl font-bold mb-2 text-white">Generated Question:</h3>
-                                    <p class="text-lg text-emerald-100">${generatedQuestion}</p>
-                                </div>
-                            ` : ''}
-                        </div>
-
-                        <button id="back-to-role-selection" class="mt-8 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75 transform hover:scale-105">
-                            &larr; Back to Role Selection
-                        </button>
-                    </div>
-                `;
-                // Attach event listeners for Seeker UI elements
-                document.getElementById('template1-option1-select').addEventListener('change', (e) => {
-                    template1Option1 = e.target.value;
-                    window.renderApp();
-                });
-                document.getElementById('template1-option2-select').addEventListener('change', (e) => {
-                    template1Option2 = e.target.value;
-                    window.renderApp();
-                });
-                document.getElementById('generate-q1-button').addEventListener('click', () => handleGenerateQuestion(1));
-
-                document.getElementById('template2-input').addEventListener('input', (e) => {
-                    template2Question = e.target.value;
-                });
-                document.getElementById('generate-q2-button').addEventListener('click', () => handleGenerateQuestion(2));
-
-                document.getElementById('template3-input').addEventListener('input', (e) => {
-                    template3Question = e.target.value;
-                });
-                document.getElementById('generate-q3-button').addEventListener('click', () => handleGenerateQuestion(3));
-
-                document.getElementById('template4-input').addEventListener('input', (e) => {
-                    template4Question = e.target.value;
-                });
-                document.getElementById('generate-q4-button').addEventListener('click', () => handleGenerateQuestion(4));
-
-                document.getElementById('template5-input').addEventListener('input', (e) => {
-                    template5Question = e.target.value;
-                });
-                document.getElementById('generate-q5-button').addEventListener('click', () => handleGenerateQuestion(5));
-
-                document.getElementById('back-to-role-selection').addEventListener('click', () => {
-                    gameMode = null;
-                    generatedQuestion = ''; // Clear generated question
-                    window.renderApp();
-                });
-                return;
-            }
-
-            // Hider UI
-            appRoot.innerHTML = `
-                <!-- Confirmation Modal -->
-                ${showConfirmation ? `
-                    <div class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4">
-                        <div class="bg-gray-700 rounded-lg p-6 shadow-xl max-w-md w-full text-center">
-                            <h3 class="text-xl font-bold mb-4 text-orange-300">Confirm Play</h3>
-                            <p class="text-gray-200 mb-6">Are you sure you want to play "<span class="font-semibold text-lg text-white">${cardToPlay ? getCardDefinition(cardToPlay).title : ''}</span>"?</p>
-                            <div class="flex justify-around">
-                                <button id="confirm-play-button" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-5 rounded-full transition duration-300 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-opacity-75">
-                                    Yes, Play It
-                                </button>
-                                <button id="cancel-play-button" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-5 rounded-full transition duration-300 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75">
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-
-                <div class="min-h-screen bg-gray-900 text-white font-inter flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
-                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500 drop-shadow-lg">
-                        Hide & Seek: Hider's Hand
-                    </h1>
-
-                    <p class="text-gray-400 mb-6 text-center text-sm sm:text-base">
-                        Your user ID: <span class="font-mono text-xs sm:text-sm bg-gray-800 px-2 py-1 rounded-md break-all">${window.currentUserId}</span>
-                    </p>
-
-                    ${errorMessage ? `
-                        <div class="bg-red-500 text-white p-3 rounded-md mb-6 w-full max-w-2xl text-center shadow-lg">
-                            ${errorMessage}
-                        </div>
-                    ` : ''}
-
-                    <div class="flex flex-col sm:flex-row gap-4 mb-8">
-                        <button id="draw-card-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transform hover:scale-105">
-                            Draw Card (${deckRemaining.length} Left)
-                        </button>
-                        <button id="reset-game-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 transform hover:scale-105">
-                            Reset Game
-                        </button>
-                        <button id="back-to-role-selection-hider" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-full transition duration-300 ease-in-out shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75 transform hover:scale-105">
-                            &larr; Back to Role Selection
-                        </button>
-                    </div>
-
-                    <div class="w-full max-w-4xl bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-8">
-                        <h2 class="text-3xl font-bold mb-6 text-emerald-300 text-center">Your Hand</h2>
-                        ${cardsInHand.length === 0 ? `
-                            <p class="text-gray-400 text-lg text-center py-8">
-                                Your hand is empty! Draw a card to begin.
-                            </p>
-                        ` : `
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                ${cardsInHand.map(cardId => {
-                                    const card = getCardDefinition(cardId);
-                                    if (!card) return '';
-                                    return `
-                                        <div class="bg-gray-700 rounded-lg p-5 flex flex-col justify-between shadow-lg border border-gray-600 hover:border-emerald-400 transition-all duration-200 ease-in-out transform hover:scale-105">
-                                            <div>
-                                                <h3 class="text-xl font-semibold mb-2 text-white">${card.title}</h3>
-                                                <p class="text-gray-300 text-sm mb-4">${card.description}</p>
-                                            </div>
-                                            <button data-card-id="${card.id}" class="play-card-button w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-opacity-75">
-                                                Play Card
-                                            </button>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                        `}
-                    </div>
-                </div>
-            `;
-            // Attach event listeners for Hider UI elements AFTER they are rendered
-            if (document.getElementById('draw-card-button')) {
-                document.getElementById('draw-card-button').addEventListener('click', handleDrawCard);
-            }
-            if (document.getElementById('reset-game-button')) {
-                document.getElementById('reset-game-button').addEventListener('click', handleResetGame);
-            }
-            if (document.getElementById('back-to-role-selection-hider')) {
-                document.getElementById('back-to-role-selection-hider').addEventListener('click', () => {
-                    // Unsubscribe the Firestore listener when leaving hider mode
-                    if (unsubscribeHiderListener) {
-                        unsubscribeHiderListener(); 
-                        unsubscribeHiderListener = null;
-                    }
-                    gameMode = null;
-                    window.renderApp();
-                });
-            }
-            if (showConfirmation) {
-                document.getElementById('confirm-play-button').addEventListener('click', () => {
-                    handlePlayCard(cardToPlay);
-                    showConfirmation = false;
-                    cardToPlay = null;
-                    window.renderApp();
-                });
-                document.getElementById('cancel-play-button').addEventListener('click', () => {
-                    showConfirmation = false;
-                    cardToPlay = null;
-                    window.renderApp();
-                });
-            }
-            document.querySelectorAll('.play-card-button').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    cardToPlay = e.target.dataset.cardId;
-                    showConfirmation = true;
-                    window.renderApp();
-                });
-            });
+    function drawThreeChooseOne() {
+      const cards = [getRandomCard(), getRandomCard(), getRandomCard()];
+      const chooser = document.createElement('div');
+      chooser.innerHTML = '<h3>Choose one card:</h3>';
+      cards.forEach(card => {
+        const btn = document.createElement('button');
+        btn.innerText = card;
+        btn.className = 'button';
+        btn.onclick = () => {
+          hand.push(card);
+          renderHand();
+          chooser.remove();
         };
+        chooser.appendChild(btn);
+      });
+      document.body.appendChild(chooser);
+    }
 
-        // Call renderApp initially once the DOM is ready.
-        // The renderApp function itself checks window.loading, which is set to false
-        // by the onAuthStateChanged callback in the module script.
-        // This is the most reliable pattern for plain HTML/JS.
-        document.addEventListener('DOMContentLoaded', () => {
-            window.renderApp();
-        });
-    </script>
+    function getRandomCard() {
+      return allCards[Math.floor(Math.random() * allCards.length)];
+    }
+
+    function renderHand() {
+      const handDiv = document.getElementById('hand');
+      handDiv.innerHTML = '';
+      hand.forEach((card, index) => {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'card';
+        cardDiv.innerHTML = `${card} <br><button onclick="useCard(${index})">Use</button>`;
+        handDiv.appendChild(cardDiv);
+      });
+    }
+
+    function useCard(index) {
+      alert(`You used: ${hand[index]}`);
+      hand.splice(index, 1);
+      renderHand();
+    }
+  </script>
 </body>
 </html>
