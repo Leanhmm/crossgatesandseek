@@ -122,8 +122,6 @@
     }
 
     // Seeker questions logic
-    const wordBank = ["store", "bathroom", "bench", "escalator", "food court"];
-
     const questionTemplates = [
       "Is your nearest ___ the same as my nearest ___?",
       "Notify the hiders that you are starting a thermometer. Once they respond, you have 30 seconds to move. The Hiders must then state if you are hotter or colder.",
@@ -132,10 +130,24 @@
       "Are you hiding near a ___?"
     ];
 
+    const wordBanks = [
+      ["store", "bathroom", "bench", "food court"], // For Q1
+      [],                                              // For Q2 (no blanks)
+      ["clothing store", "restaurant", "shoe store"],  // For Q3
+      ["fountain", "poster", "sign", "storefront"],   // For Q4
+      ["plant", "statue", "pillar", "trash can"]      // For Q5
+    ];
+
     function askQuestion(index) {
       const template = questionTemplates[index];
-      const word = wordBank[Math.floor(Math.random() * wordBank.length)];
-      const filledQuestion = template.replace(/___/g, word);
+      let filledQuestion = template;
+
+      if (template.includes("___")) {
+        const bank = wordBanks[index];
+        const word = bank[Math.floor(Math.random() * bank.length)];
+        filledQuestion = template.replace(/___/g, word);
+      }
+
       document.getElementById('questionDisplay').innerText = filledQuestion;
     }
   </script>
