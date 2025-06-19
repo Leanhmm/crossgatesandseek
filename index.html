@@ -1,3 +1,4 @@
+<!-- Save this as index.html and upload to GitHub Pages -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,12 +18,22 @@
       padding: 10px;
       margin: 10px;
       display: inline-block;
+      width: 200px;
     }
     .button {
       margin: 10px;
       padding: 10px 20px;
       font-size: 16px;
       cursor: pointer;
+    }
+    .card-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .card-description {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -48,11 +59,11 @@
 
   <script>
     const allCards = [
-      "Speed Boost",
-      "Invisible Cloak",
-      "Decoy",
-      "Mall Map",
-      "Time Freeze"
+      { name: "Speed Boost", description: "Move to a new hiding spot without being noticed." },
+      { name: "Invisible Cloak", description: "You are invisible for the next 2 seeker questions." },
+      { name: "Decoy", description: "Send a fake clue to the seekers." },
+      { name: "Mall Map", description: "Get a hint about the best hiding areas." },
+      { name: "Time Freeze", description: "Freeze time and pause all seeker actions for 1 minute." }
     ];
 
     const hand = [];
@@ -78,7 +89,7 @@
       chooser.innerHTML = '<h3>Choose one card:</h3>';
       cards.forEach(card => {
         const btn = document.createElement('button');
-        btn.innerText = card;
+        btn.innerText = card.name;
         btn.className = 'button';
         btn.onclick = () => {
           hand.push(card);
@@ -100,13 +111,17 @@
       hand.forEach((card, index) => {
         const cardDiv = document.createElement('div');
         cardDiv.className = 'card';
-        cardDiv.innerHTML = `${card} <br><button onclick="useCard(${index})">Use</button>`;
+        cardDiv.innerHTML = `
+          <div class="card-title">${card.name}</div>
+          <div class="card-description">${card.description}</div>
+          <button onclick="useCard(${index})">Use</button>
+        `;
         handDiv.appendChild(cardDiv);
       });
     }
 
     function useCard(index) {
-      alert(`You used: ${hand[index]}`);
+      alert(`You used: ${hand[index].name}`);
       hand.splice(index, 1);
       renderHand();
     }
