@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hide and Seek at the Mall</title>
+  <title>Hide and Seek: Crossgates Edition</title>
   <style>
     body {
       font-family: sans-serif;
@@ -33,7 +33,7 @@
 </head>
 <body>
   <div id="main">
-    <h1>Hide and Seek at the Mall</h1>
+    <h1>Hide and Seek: Crossgates Edition</h1>
     <button class="button" onclick="goToRole('hider')">I'm a Hider</button>
     <button class="button" onclick="goToRole('seeker')">I'm a Seeker</button>
   </div>
@@ -52,17 +52,28 @@
     <button class="button" onclick="askQuestion(1)">Question 2</button>
     <button class="button" onclick="askQuestion(2)">Question 3</button>
     <button class="button" onclick="askQuestion(3)">Question 4</button>
-    <button class="button" onclick="askQuestion(4)">Question 5</button>
     <div id="questionDisplay"></div>
   </div>
 
   <script>
     const allCards = [
-      "Speed Boost",
-      "Invisible Cloak",
-      "Decoy",
-      "Mall Map",
-      "Time Freeze"
+      "Curse of The Animal Love",
+      "Curse of The Bestest Builder",
+      "Curse of The Middle School Boy",
+      "Curse of The Prettiest Princess",
+      "Curse of The Overflowing Chalice",
+      "Curse of The Mediocre Travel Agent",
+      "Curse of The Bargain Hunter",
+      "Curse of The Disabled",
+      "Curse of The Toilet Troll",
+      "Curse of The Jammed Door",
+      "Curse of The Impressionable Consumer",
+      "Curse of The Right Turn",
+      "Curse of The New York Times",
+      "Curse of The Spotty Memory",
+      "Curse of The Drained Brain",
+      "Curse of The Ransom Note",
+      "Curse of The Sniff",
     ];
 
     const hand = [];
@@ -127,7 +138,6 @@
       "Notify the hiders that you are starting a thermometer. Once they respond, you have 30 seconds to move. The Hiders must then state if you are hotter or colder.",
       "Out of all the ___ places within five stores of the seekers, which are the hiders closest to?",
       "Take a photo of ___",
-      "Are you hiding near a ___?"
     ];
 
     const wordBanks = [
@@ -135,7 +145,6 @@
       [],                                              // For Q2 (no blanks)
       ["clothing store", "restaurant", "shoe store"],  // For Q3
       ["fountain", "poster", "sign", "storefront"],   // For Q4
-      ["plant", "statue", "pillar", "trash can"]      // For Q5
     ];
 
     function askQuestion(index) {
