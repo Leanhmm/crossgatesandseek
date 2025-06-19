@@ -45,7 +45,9 @@
                     }
                 }
                 window.currentUserId = window.auth.currentUser?.uid || crypto.randomUUID();
-                // After auth, render the app (ensure global render function is defined)
+                // Set loading to false once authentication is complete, regardless of game mode
+                window.loading = false; // <--- IMPORTANT FIX HERE
+                // After auth, render the app
                 if (typeof window.renderApp === 'function') {
                     window.renderApp();
                 }
@@ -53,6 +55,7 @@
         } catch (error) {
             console.error('Firebase initialization failed:', error);
             // Optionally display error to user
+            window.loading = false; // Also set false on init failure
         }
     </script>
     <style>
@@ -324,12 +327,12 @@
                             } else {
                                 initializeGameData(); // Initialize if not found
                             }
-                            loading = false;
+                            // No longer set loading = false here, it's handled by onAuthStateChanged
                             renderApp(); // Re-render with updated data
                         }, (error) => {
                             console.error("Error fetching game data:", error);
                             errorMessage = 'Failed to load game data. Please refresh.';
-                            loading = false;
+                            // No longer set loading = false here
                             renderApp();
                         });
                     }
