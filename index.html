@@ -18,6 +18,8 @@
         window.db = null;
         window.auth = null;
         window.currentUserId = null;
+        // Initialize loading state to true, accessible globally
+        window.loading = true; 
 
         // Ensure global Firebase config and app ID are accessible
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -46,7 +48,7 @@
                 }
                 window.currentUserId = window.auth.currentUser?.uid || crypto.randomUUID();
                 // Set loading to false once authentication is complete, regardless of game mode
-                window.loading = false; // <--- IMPORTANT FIX HERE
+                window.loading = false; 
                 // After auth, render the app
                 if (typeof window.renderApp === 'function') {
                     window.renderApp();
@@ -109,7 +111,7 @@
         let cardsInHand = [];
         let deckRemaining = [];
         let allCardDefinitions = initialAllCards;
-        let loading = true;
+        // `loading` is managed by the module script, refer to `window.loading`
         let errorMessage = '';
         let showConfirmation = false;
         let cardToPlay = null;
@@ -144,7 +146,7 @@
         async function initializeGameData() {
             if (!window.db) {
                 errorMessage = 'Database not initialized.';
-                renderApp(); // Re-render to show error
+                window.renderApp(); 
                 return;
             }
 
@@ -157,23 +159,22 @@
                     deckRemaining: shuffledDeck,
                     allCardDefinitions: initialAllCards,
                 }, { merge: true });
-                console.log("Game data initialized successfully.");
                 errorMessage = ''; // Clear error on success
             } catch (error) {
                 console.error("Error initializing game data:", error);
                 errorMessage = 'Failed to initialize game data.';
             } finally {
-                renderApp(); // Re-render after initialization attempt
+                window.renderApp(); 
             }
         }
 
         // Handle drawing a new card
         async function handleDrawCard() {
-            if (!window.db || loading) return;
+            if (!window.db || window.loading) return; 
 
             if (deckRemaining.length === 0) {
                 errorMessage = "No cards left in the deck! Reset the game to reshuffle.";
-                renderApp();
+                window.renderApp();
                 return;
             }
 
@@ -200,13 +201,13 @@
                 console.error("Error drawing card:", error);
                 errorMessage = 'Failed to draw a card.';
             } finally {
-                renderApp();
+                window.renderApp(); 
             }
         }
 
         // Handle playing a card (removes it from hand)
         async function handlePlayCard(id) {
-            if (!window.db || loading) return;
+            if (!window.db || window.loading) return; 
 
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             const gameDocRef = doc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame');
@@ -218,13 +219,13 @@
                 console.error("Error playing card:", error);
                 errorMessage = 'Failed to play card.';
             } finally {
-                renderApp();
+                window.renderApp(); 
             }
         }
 
         // Reset the game (clear hand, reshuffle deck)
         async function handleResetGame() {
-            if (!window.db || loading) return;
+            if (!window.db || window.loading) return; 
 
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             const gameDocRef = doc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame');
@@ -240,7 +241,7 @@
                 console.error("Error resetting game:", error);
                 errorMessage = 'Failed to reset game.';
             } finally {
-                renderApp();
+                window.renderApp(); 
             }
         }
 
@@ -267,7 +268,7 @@
                     question = "Please select a valid template.";
             }
             generatedQuestion = question;
-            renderApp(); // Re-render to show the generated question
+            window.renderApp(); 
         }
 
         // Main render function for the application
@@ -275,7 +276,7 @@
             const appRoot = document.getElementById('app-root');
             appRoot.innerHTML = ''; // Clear previous content
 
-            if (loading) {
+            if (window.loading) { // Use window.loading for the check
                 appRoot.innerHTML = `
                     <div class="min-h-screen flex items-center justify-center bg-gray-900 text-white p-4">
                         <div class="flex flex-col items-center">
@@ -313,7 +314,7 @@
                 // Attach event listeners
                 document.getElementById('hider-button').addEventListener('click', () => {
                     gameMode = 'hider';
-                    renderApp(); // Re-render for Hider UI
+                    window.renderApp(); 
                     // Start listening to Firestore once mode is set
                     if (window.db && window.currentUserId) {
                         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -327,19 +328,17 @@
                             } else {
                                 initializeGameData(); // Initialize if not found
                             }
-                            // No longer set loading = false here, it's handled by onAuthStateChanged
-                            renderApp(); // Re-render with updated data
+                            window.renderApp(); 
                         }, (error) => {
                             console.error("Error fetching game data:", error);
                             errorMessage = 'Failed to load game data. Please refresh.';
-                            // No longer set loading = false here
-                            renderApp();
+                            window.renderApp(); 
                         });
                     }
                 });
                 document.getElementById('seeker-button').addEventListener('click', () => {
                     gameMode = 'seeker';
-                    renderApp(); // Re-render for Seeker UI
+                    window.renderApp(); 
                 });
                 return;
             }
@@ -436,11 +435,11 @@
                 // Attach event listeners for Seeker UI elements
                 document.getElementById('template1-option1-select').addEventListener('change', (e) => {
                     template1Option1 = e.target.value;
-                    renderApp();
+                    window.renderApp();
                 });
                 document.getElementById('template1-option2-select').addEventListener('change', (e) => {
                     template1Option2 = e.target.value;
-                    renderApp();
+                    window.renderApp();
                 });
                 document.getElementById('generate-q1-button').addEventListener('click', () => handleGenerateQuestion(1));
 
@@ -467,7 +466,7 @@
                 document.getElementById('back-to-role-selection').addEventListener('click', () => {
                     gameMode = null;
                     generatedQuestion = ''; // Clear generated question
-                    renderApp();
+                    window.renderApp();
                 });
                 return;
             }
@@ -557,7 +556,7 @@
             if (document.getElementById('back-to-role-selection-hider')) {
                 document.getElementById('back-to-role-selection-hider').addEventListener('click', () => {
                     gameMode = null;
-                    renderApp();
+                    window.renderApp();
                 });
             }
             if (showConfirmation) {
@@ -565,37 +564,29 @@
                     handlePlayCard(cardToPlay);
                     showConfirmation = false;
                     cardToPlay = null;
-                    renderApp();
+                    window.renderApp();
                 });
                 document.getElementById('cancel-play-button').addEventListener('click', () => {
                     showConfirmation = false;
                     cardToPlay = null;
-                    renderApp();
+                    window.renderApp();
                 });
             }
             document.querySelectorAll('.play-card-button').forEach(button => {
                 button.addEventListener('click', (e) => {
                     cardToPlay = e.target.dataset.cardId;
                     showConfirmation = true;
-                    renderApp();
+                    window.renderApp();
                 });
             });
         };
 
-        // Call renderApp initially once the DOM is ready and Firebase is likely initialized
+        // Call renderApp initially once the DOM is ready.
+        // The renderApp function itself checks window.loading, which is set to false
+        // by the onAuthStateChanged callback in the module script.
+        // This is the most reliable pattern for plain HTML/JS.
         document.addEventListener('DOMContentLoaded', () => {
-            // Give Firebase a moment to initialize if it hasn't already
-            if (window.currentUserId) {
-                window.renderApp();
-            } else {
-                // Fallback: If Firebase init is slower, render when auth completes
-                const checkInterval = setInterval(() => {
-                    if (window.currentUserId) {
-                        clearInterval(checkInterval);
-                        window.renderApp();
-                    }
-                }, 100); // Check every 100ms
-            }
+            window.renderApp();
         });
     </script>
 </body>
