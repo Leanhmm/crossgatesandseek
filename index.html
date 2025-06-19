@@ -13,13 +13,26 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, where, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // Global variables for Firebase instances
+        // Global variables for Firebase instances and functions
         window.app = null;
         window.db = null;
         window.auth = null;
         window.currentUserId = null;
-        // Initialize loading state to true, accessible globally
         window.loading = true; 
+
+        // Make Firestore functions globally accessible
+        window.firebaseDoc = doc;
+        window.firebaseGetDoc = getDoc;
+        window.firebaseSetDoc = setDoc;
+        window.firebaseUpdateDoc = updateDoc;
+        window.firebaseOnSnapshot = onSnapshot;
+        // Also exposing these for completeness, though not strictly used in current error context
+        window.firebaseCollection = collection;
+        window.firebaseQuery = query;
+        window.firebaseWhere = where;
+        window.firebaseAddDoc = addDoc;
+        window.firebaseGetDocs = getDocs;
+
 
         // Ensure global Firebase config and app ID are accessible
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -155,10 +168,10 @@
             }
 
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const gameDocRef = doc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame');
+            const gameDocRef = window.firebaseDoc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame'); // Use window.firebaseDoc
             try {
                 const shuffledDeck = shuffleArray([...initialAllCards.map(card => card.id)]);
-                await setDoc(gameDocRef, {
+                await window.firebaseSetDoc(gameDocRef, { // Use window.firebaseSetDoc
                     cardsInHand: [],
                     deckRemaining: shuffledDeck,
                     allCardDefinitions: initialAllCards,
@@ -189,7 +202,7 @@
             }
 
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const gameDocRef = doc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame');
+            const gameDocRef = window.firebaseDoc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame'); // Use window.firebaseDoc
             try {
                 const currentDeck = [...deckRemaining];
                 const currentHand = [...cardsInHand];
@@ -199,7 +212,7 @@
 
                 if (drawnCardDef) {
                     currentHand.push(drawnCardId);
-                    await updateDoc(gameDocRef, {
+                    await window.firebaseUpdateDoc(gameDocRef, { // Use window.firebaseUpdateDoc
                         cardsInHand: currentHand,
                         deckRemaining: currentDeck,
                     });
@@ -220,10 +233,10 @@
             if (!window.db || window.loading) return; 
 
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const gameDocRef = doc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame');
+            const gameDocRef = window.firebaseDoc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame'); // Use window.firebaseDoc
             try {
                 const updatedHand = cardsInHand.filter(cardId => cardId !== id);
-                await updateDoc(gameDocRef, { cardsInHand: updatedHand });
+                await window.firebaseUpdateDoc(gameDocRef, { cardsInHand: updatedHand }); // Use window.firebaseUpdateDoc
                 errorMessage = ''; // Clear previous error
             } catch (error) {
                 console.error("Error playing card:", error);
@@ -238,10 +251,10 @@
             if (!window.db || window.loading) return; 
 
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const gameDocRef = doc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame');
+            const gameDocRef = window.firebaseDoc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame'); // Use window.firebaseDoc
             try {
                 const shuffledDeck = shuffleArray([...allCardDefinitions.map(card => card.id)]);
-                await setDoc(gameDocRef, {
+                await window.firebaseSetDoc(gameDocRef, { // Use window.firebaseSetDoc
                     cardsInHand: [],
                     deckRemaining: shuffledDeck,
                     allCardDefinitions: allCardDefinitions,
@@ -294,29 +307,33 @@
                 unsubscribeHiderListener(); 
                 unsubscribeHiderListener = null;
             }
-            if (!window.db || !window.currentUserId || gameMode !== 'hider') {
+            // Ensure we have db and userId before attempting to set up listener
+            if (!window.db || !window.currentUserId) {
+                errorMessage = 'Firebase not fully initialized for Hider mode.';
+                window.loading = false;
+                window.renderApp();
                 return;
             }
 
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const gameDocRef = doc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame');
+            const gameDocRef = window.firebaseDoc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame'); // Use window.firebaseDoc
 
-            unsubscribeHiderListener = onSnapshot(gameDocRef, (docSnap) => {
+            unsubscribeHiderListener = window.firebaseOnSnapshot(gameDocRef, async (docSnap) => { // Use window.firebaseOnSnapshot
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     cardsInHand = data.cardsInHand || [];
                     deckRemaining = data.deckRemaining || [];
                     allCardDefinitions = data.allCardDefinitions || initialAllCards;
                 } else {
-                    // If the document is deleted by another client or doesn't exist, re-initialize
-                    initializeGameData(); 
+                    // If the document doesn't exist, initialize it
+                    await initializeGameData(); // Await initialization
                 }
-                window.loading = false; // <<< --- Crucial: Set loading to false once data is received
-                window.renderApp(); // Re-render with real-time updates
+                window.loading = false; 
+                window.renderApp(); 
             }, (error) => {
                 console.error("Error listening to game data:", error);
                 errorMessage = 'Failed to get real-time game updates. Please check console for details.';
-                window.loading = false; // Also set false on error
+                window.loading = false; 
                 window.renderApp();
             });
         }
@@ -370,23 +387,9 @@
                     window.loading = true; // Show loading spinner temporarily
                     window.renderApp(); // Render the loading state
 
-                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                    const gameDocRef = doc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame');
-
-                    try {
-                        const docSnap = await getDoc(gameDocRef); // Fetch once to check existence
-                        if (!docSnap.exists()) {
-                            await initializeGameData(); // Initialize if not found
-                        }
-                    } catch (error) {
-                        console.error("Error fetching initial game data:", error);
-                        errorMessage = 'Failed to load initial game data. Please refresh.';
-                        window.loading = false; // Ensure loading is off if initial fetch fails
-                        window.renderApp();
-                    } finally {
-                        // Crucial: setupHiderListener will now handle setting window.loading to false
-                        setupHiderListener(); // Attach the real-time listener (which also renders initially)
-                    }
+                    // Directly call setupHiderListener. It will handle the initial fetch
+                    // and updating window.loading=false.
+                    setupHiderListener();
                 });
 
                 document.getElementById('seeker-button').addEventListener('click', () => {
