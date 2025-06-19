@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -17,6 +17,14 @@
       padding: 10px;
       margin: 10px;
       display: inline-block;
+      width: 250px;
+    }
+    .card-title {
+      font-weight: bold;
+    }
+    .card-description {
+      font-size: 14px;
+      margin: 8px 0;
     }
     .button {
       margin: 10px;
@@ -73,8 +81,28 @@
       "Curse of The Spotty Memory",
       "Curse of The Drained Brain",
       "Curse of The Ransom Note",
-      "Curse of The Sniff",
+      "Curse of The Sniff"
     ];
+  
+    const cardDescriptions = {
+      "Curse of The Animal Love": "Seekers must take a photo of them petting an animal",
+      "Curse of The Bestest Builder": "Seekers must purchase and complete a lego set, and send a photo of the lego set to the seekers before continueing their search",
+      "Curse of The Middle School Boy": "Seekers must successfully flip a water bottle, having it land right side up, three times consecutively before continuing their search",
+      "Curse of The Prettiest Princess": "Before asking another question, one team member must try on a very pretty clothing item and send a photo to the other team",
+      "Curse of The Overflowing Chalice": "For the next three questions, you may draw (not keep) an additional card when drawing from the hider deck",
+      "Curse of The Mediocre Travel Agent": "Give unsolicited directions to the next person you see.",
+      "Curse of The Bargain Hunter": "Take a photo of any item for sale. The Seekers must take a photo of the same item (may be a different brand) being sold at a cheaper price before continuing",
+      "Curse of The Disabled": "Seekers may not use escalators for the next ten minutes",
+      "Curse of The Toilet Troll": "The seekers must ask their next question from inside a bathroom stall",
+      "Curse of The Jammed Door": "For the next 15 minutes, whenever the seeker(s) want to pass through a doorway/entrance into a  business they must first flip a coin. If the coin does not land on heads, they cannot pass through the entry",
+      "Curse of The Impressionable Consumer": "Seekers must take a photo of a product that they saw an advertisement for before asking another question. This advertisement may be found on your phone, but it may not be found via a search",
+      "Curse of The Right Turn": "For the next 5 minutes the seekers can only enter buisnesses that are on the right side of them (they must only walk on the right side of the hall and may not cross to the other side of a hall until they hit JCPenny or Macys",
+      "Curse of The New York Times": "The seekers must solve the wordle before answering another question. If the wordle has already been solved, they must solve the mini",
+      "Curse of The Spotty Memory": "For the rest of the run, one random category of questions will be disabled at all times. After this curse is played seeker(s) must roll a die to determine the category of questions to be disabled. The catergy remain disabled until the next question is asked at which point a die is rolled again to choose an e category. The same category can be disabled multiple times in a row",
+      "Curse of The Drained Brain": "Choose three questions in different categories. The seekers cannot ask those questions for the rest of the run",
+      "Curse of The Ransom Note": "The next question that the seekers ask must be composed using a compilation of photos of the words found in printed material throughout the mall",  
+      "Curse of The Sniff": "Before continueing, the seekers must go to bath and body works and, given two options, one of the seekers must blindly guess the name of the scent their teammate presents them with"
+    };
 
     const hand = [];
 
@@ -121,7 +149,19 @@
       hand.forEach((card, index) => {
         const cardDiv = document.createElement('div');
         cardDiv.className = 'card';
-        cardDiv.innerHTML = `${card} <br><button onclick="useCard(${index})">Use</button>`;
+        const title = document.createElement('div');
+        title.className = 'card-title';
+        title.innerText = card;
+        const desc = document.createElement('div');
+        desc.className = 'card-description';
+        desc.innerText = cardDescriptions[card] || "No description provided.";
+        const useBtn = document.createElement('button');
+        useBtn.className = 'button';
+        useBtn.innerText = 'Use';
+        useBtn.onclick = () => useCard(index);
+        cardDiv.appendChild(title);
+        cardDiv.appendChild(desc);
+        cardDiv.appendChild(useBtn);
         handDiv.appendChild(cardDiv);
       });
     }
@@ -132,19 +172,18 @@
       renderHand();
     }
 
-    // Seeker questions logic
     const questionTemplates = [
       "Is your nearest ___ the same as my nearest ___?",
       "Notify the hiders that you are starting a thermometer. Once they respond, you have 30 seconds to move. The Hiders must then state if you are hotter or colder.",
       "Out of all the ___ places within five stores of the seekers, which are the hiders closest to?",
-      "Take a photo of ___",
+      "Take a photo of ___"
     ];
 
     const wordBanks = [
-      ["Jewelry Store", "Bathroom", "Shoe Store", "Escalator", "Entertainment Establishment", "Mall Entrance"], // For Q1
-      [],                                              // For Q2 (no blanks)
-      ["clothing", "food"],  // For Q3
-      ["something pink", "a mannequin limb", "a wall", "a sale sign", "a hanger", "your teammate","the thing closest to you"],   // For Q4
+      ["Jewelry Store", "Bathroom", "Shoe Store", "Escalator", "Entertainment Establishment", "Mall Entrance"],
+      [],
+      ["clothing", "food"],
+      ["something pink", "a mannequin limb", "a wall", "a sale sign", "a hanger", "your teammate","the thing closest to you"]
     ];
 
     function askQuestion(index) {
