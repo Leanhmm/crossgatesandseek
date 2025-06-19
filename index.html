@@ -126,6 +126,10 @@
         let template5Question = '';
         let generatedQuestion = '';
 
+        // Global variable to store unsubscribe function for Firestore listener
+        let unsubscribeHiderListener = null;
+
+
         // Helper function to get card definition from its ID
         function getCardDefinition(cardId) {
             return allCardDefinitions.find(card => card.id === cardId);
@@ -171,7 +175,7 @@
                 console.error("Error initializing game data:", error);
                 errorMessage = 'Failed to initialize game data.';
             } finally {
-                window.renderApp(); 
+                // Do not render here, render is handled by the caller after init/fetch
             }
         }
 
@@ -285,6 +289,40 @@
             window.renderApp(); 
         }
 
+        // Function to set up the Firestore listener for Hider data
+        function setupHiderListener() {
+            // Unsubscribe any existing listener before setting a new one
+            if (unsubscribeHiderListener) {
+                unsubscribeHiderListener(); 
+                unsubscribeHiderListener = null;
+            }
+            if (!window.db || !window.currentUserId || gameMode !== 'hider') {
+                return;
+            }
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const gameDocRef = doc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame');
+
+            unsubscribeHiderListener = onSnapshot(gameDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    cardsInHand = data.cardsInHand || [];
+                    deckRemaining = data.deckRemaining || [];
+                    allCardDefinitions = data.allCardDefinitions || initialAllCards;
+                } else {
+                    // If the document is deleted by another client, re-initialize
+                    // Note: initializeGameData will update local state but does NOT call renderApp
+                    initializeGameData(); 
+                }
+                window.renderApp(); // Re-render with real-time updates
+            }, (error) => {
+                console.error("Error listening to game data:", error);
+                errorMessage = 'Failed to get real-time game updates.';
+                window.renderApp();
+            });
+        }
+
+
         // Main render function for the application
         window.renderApp = function() {
             const appRoot = document.getElementById('app-root');
@@ -326,30 +364,33 @@
                     </div>
                 `;
                 // Attach event listeners
-                document.getElementById('hider-button').addEventListener('click', () => {
+                document.getElementById('hider-button').addEventListener('click', async () => {
                     gameMode = 'hider';
-                    window.renderApp(); 
-                    // Start listening to Firestore once mode is set
-                    if (window.db && window.currentUserId) {
-                        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                        const gameDocRef = doc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame');
-                        onSnapshot(gameDocRef, (docSnap) => {
-                            if (docSnap.exists()) {
-                                const data = docSnap.data();
-                                cardsInHand = data.cardsInHand || [];
-                                deckRemaining = data.deckRemaining || [];
-                                allCardDefinitions = data.allCardDefinitions || initialAllCards;
-                            } else {
-                                initializeGameData(); // Initialize if not found
-                            }
-                            window.renderApp(); 
-                        }, (error) => {
-                            console.error("Error fetching game data:", error);
-                            errorMessage = 'Failed to load game data. Please refresh.';
-                            window.renderApp(); 
-                        });
+                    window.loading = true; // Show loading spinner temporarily
+                    window.renderApp(); // Render the loading state
+
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    const gameDocRef = doc(window.db, `artifacts/${appId}/public/data/gameStates`, 'mainGame');
+
+                    try {
+                        const docSnap = await getDoc(gameDocRef); // Fetch once to check existence
+                        if (!docSnap.exists()) {
+                            await initializeGameData(); // Initialize if not found
+                        }
+                        // After initial data is confirmed/initialized, fetch it locally one more time
+                        // to ensure the latest state is captured before setting up the listener
+                        // as the initializeGameData already updates the local state, we can rely on it.
+                        // However, onSnapshot still gives initial state
+                    } catch (error) {
+                        console.error("Error fetching initial game data:", error);
+                        errorMessage = 'Failed to load initial game data. Please refresh.';
+                    } finally {
+                        window.loading = false; // Remove loading spinner
+                        setupHiderListener(); // Attach the real-time listener (which also renders initially)
+                        // The initial render will be handled by setupHiderListener's onSnapshot callback
                     }
                 });
+
                 document.getElementById('seeker-button').addEventListener('click', () => {
                     gameMode = 'seeker';
                     window.renderApp(); 
@@ -569,6 +610,11 @@
             }
             if (document.getElementById('back-to-role-selection-hider')) {
                 document.getElementById('back-to-role-selection-hider').addEventListener('click', () => {
+                    // Unsubscribe the Firestore listener when leaving hider mode
+                    if (unsubscribeHiderListener) {
+                        unsubscribeHiderListener(); 
+                        unsubscribeHiderListener = null;
+                    }
                     gameMode = null;
                     window.renderApp();
                 });
