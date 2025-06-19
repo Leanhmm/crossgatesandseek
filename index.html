@@ -1,4 +1,3 @@
-<!-- Save this as index.html and upload to GitHub Pages -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,7 +17,6 @@
       padding: 10px;
       margin: 10px;
       display: inline-block;
-      width: 200px;
     }
     .button {
       margin: 10px;
@@ -26,14 +24,10 @@
       font-size: 16px;
       cursor: pointer;
     }
-    .card-title {
+    #questionDisplay {
+      margin-top: 20px;
+      font-size: 18px;
       font-weight: bold;
-      margin-bottom: 5px;
-    }
-    .card-description {
-      font-size: 14px;
-      color: #555;
-      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -54,16 +48,21 @@
 
   <div id="seekerPage" style="display: none;">
     <h2>Seeker Mode</h2>
-    <!-- Blank for now -->
+    <button class="button" onclick="askQuestion(0)">Question 1</button>
+    <button class="button" onclick="askQuestion(1)">Question 2</button>
+    <button class="button" onclick="askQuestion(2)">Question 3</button>
+    <button class="button" onclick="askQuestion(3)">Question 4</button>
+    <button class="button" onclick="askQuestion(4)">Question 5</button>
+    <div id="questionDisplay"></div>
   </div>
 
   <script>
     const allCards = [
-      { name: "Speed Boost", description: "Move to a new hiding spot without being noticed." },
-      { name: "Invisible Cloak", description: "You are invisible for the next 2 seeker questions." },
-      { name: "Decoy", description: "Send a fake clue to the seekers." },
-      { name: "Mall Map", description: "Get a hint about the best hiding areas." },
-      { name: "Time Freeze", description: "Freeze time and pause all seeker actions for 1 minute." }
+      "Speed Boost",
+      "Invisible Cloak",
+      "Decoy",
+      "Mall Map",
+      "Time Freeze"
     ];
 
     const hand = [];
@@ -89,7 +88,7 @@
       chooser.innerHTML = '<h3>Choose one card:</h3>';
       cards.forEach(card => {
         const btn = document.createElement('button');
-        btn.innerText = card.name;
+        btn.innerText = card;
         btn.className = 'button';
         btn.onclick = () => {
           hand.push(card);
@@ -111,19 +110,33 @@
       hand.forEach((card, index) => {
         const cardDiv = document.createElement('div');
         cardDiv.className = 'card';
-        cardDiv.innerHTML = `
-          <div class="card-title">${card.name}</div>
-          <div class="card-description">${card.description}</div>
-          <button onclick="useCard(${index})">Use</button>
-        `;
+        cardDiv.innerHTML = `${card} <br><button onclick="useCard(${index})">Use</button>`;
         handDiv.appendChild(cardDiv);
       });
     }
 
     function useCard(index) {
-      alert(`You used: ${hand[index].name}`);
+      alert(`You used: ${hand[index]}`);
       hand.splice(index, 1);
       renderHand();
+    }
+
+    // Seeker questions logic
+    const wordBank = ["store", "bathroom", "bench", "escalator", "food court"];
+
+    const questionTemplates = [
+      "Is your nearest ___ the same as my nearest ___?",
+      "Notify the hiders that you are starting a thermometer. Once they respond, you have 30 seconds to move. The Hiders must then state if you are hotter or colder.",
+      "Out of all the ___ places within five stores of the seekers, which are the hiders closest to?",
+      "Take a photo of ___",
+      "Are you hiding near a ___?"
+    ];
+
+    function askQuestion(index) {
+      const template = questionTemplates[index];
+      const word = wordBank[Math.floor(Math.random() * wordBank.length)];
+      const filledQuestion = template.replace(/___/g, word);
+      document.getElementById('questionDisplay').innerText = filledQuestion;
     }
   </script>
 </body>
