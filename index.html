@@ -164,11 +164,10 @@
                     allCardDefinitions: initialAllCards,
                 }, { merge: true });
 
-                // --- IMPORTANT FIX: Update local state immediately after successful Firestore write
+                // Update local state immediately after successful Firestore write
                 cardsInHand = [];
                 deckRemaining = shuffledDeck;
                 allCardDefinitions = initialAllCards; // Ensure local definitions are up-to-date
-                // --- END IMPORTANT FIX
 
                 errorMessage = ''; // Clear error on success
             } catch (error) {
@@ -248,11 +247,10 @@
                     allCardDefinitions: allCardDefinitions,
                 }, { merge: true });
 
-                // --- IMPORTANT FIX: Update local state immediately after successful Firestore write
+                // Update local state immediately after successful Firestore write
                 cardsInHand = [];
                 deckRemaining = shuffledDeck;
                 // allCardDefinitions is already the latest, so no need to re-assign here
-                // --- END IMPORTANT FIX
 
                 errorMessage = ''; // Clear previous error
             } catch (error) {
@@ -311,13 +309,14 @@
                     allCardDefinitions = data.allCardDefinitions || initialAllCards;
                 } else {
                     // If the document is deleted by another client, re-initialize
-                    // Note: initializeGameData will update local state but does NOT call renderApp
                     initializeGameData(); 
                 }
+                window.loading = false; // <<< --- Crucial: Set loading to false once data is received
                 window.renderApp(); // Re-render with real-time updates
             }, (error) => {
                 console.error("Error listening to game data:", error);
                 errorMessage = 'Failed to get real-time game updates.';
+                window.loading = false; // Also set false on error
                 window.renderApp();
             });
         }
@@ -379,15 +378,27 @@
                         }
                         // After initial data is confirmed/initialized, fetch it locally one more time
                         // to ensure the latest state is captured before setting up the listener
-                        // as the initializeGameData already updates the local state, we can rely on it.
-                        // However, onSnapshot still gives initial state
+                        const updatedDocSnap = await getDoc(gameDocRef);
+                        if (updatedDocSnap.exists()) {
+                            const data = updatedDocSnap.data();
+                            cardsInHand = data.cardsInHand || [];
+                            deckRemaining = data.deckRemaining || [];
+                            allCardDefinitions = data.allCardDefinitions || initialAllCards;
+                        } else {
+                            // Should not happen if initializeGameData just ran, but safety net
+                            console.warn("Game data document not found after initialization attempt.");
+                            cardsInHand = [];
+                            deckRemaining = [];
+                        }
                     } catch (error) {
                         console.error("Error fetching initial game data:", error);
                         errorMessage = 'Failed to load initial game data. Please refresh.';
                     } finally {
-                        window.loading = false; // Remove loading spinner
-                        setupHiderListener(); // Attach the real-time listener (which also renders initially)
-                        // The initial render will be handled by setupHiderListener's onSnapshot callback
+                        // Crucial: Do NOT set window.loading = false here.
+                        // It will be set to false by setupHiderListener's onSnapshot callback
+                        // once the actual data stream begins.
+                        setupHiderListener(); // Attach the real-time listener
+                        // No explicit renderApp here. The onSnapshot listener's callback will handle the initial render.
                     }
                 });
 
