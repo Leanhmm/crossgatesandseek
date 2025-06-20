@@ -287,10 +287,10 @@
    promptTeamSelection(cardUsed, index);
   } else {
     alert(`You used: ${cardUsed}`);
-    hand,splice(index,1);
+    hand.splice(index,1);
     db.ref('hand').set(hand);
     renderHand();
-    db.ref('usedCard').set({card: cardUsed, timestamp: date.now()});
+    db.ref('usedCard').set({card: cardUsed, timestamp: Date.now()});
   }
     }
     // Remove card from hand, update db, and set usedCard with target team
@@ -349,7 +349,7 @@
 
       const cancelBtn = document.createElement('button');
       cancelBtn.innerText = 'Cancel';
-      cancelBtn.className - 'button';
+      cancelBtn.className = 'button';
       cancelBtn.style.marginTop = '15px';
       cancelBtn.onclick = () => {
         document.body.removeChild(overlay);
