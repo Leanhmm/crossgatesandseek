@@ -91,7 +91,7 @@
     const db = firebase.database();
 
     let hand = [];
-    const allCards = ["Curse of The Animal Love",
+    const curseCards = ["Curse of The Animal Love",
       "Curse of The Bestest Builder",
       "Curse of The Middle School Boy",
       "Curse of The Prettiest Princess",
@@ -108,6 +108,22 @@
       "Curse of The Drained Brain",
       "Curse of The Ransom Note",
       "Curse of The Sniff"];
+
+    const scoreCards = [
+      "Red +2",
+      "Orange +4",
+      "Yellow +6",
+      "Green +8",
+      "Blue +12"
+      ];
+
+    const actionCards = [
+      "Veto",
+      "Move",
+      "Discard 1, Draw 2"
+      ];
+
+    const allCards = [...curseCards, ...scoreCards, ...actionCards];
     const cardDescriptions = {
        "Curse of The Animal Love": "Seekers must take a photo of them petting an animal",
       "Curse of The Bestest Builder": "Seekers must purchase and complete a lego set, and send a photo of the lego set to the seekers before continueing their search",
@@ -126,6 +142,10 @@
       "Curse of The Drained Brain": "Choose three questions in different categories. The seekers cannot ask those questions for the rest of the run",
       "Curse of The Ransom Note": "The next question that the seekers ask must be composed using a compilation of photos of the words found in printed material throughout the mall",  
       "Curse of The Sniff": "Before continueing, the seekers must go to bath and body works and, given two options, one of the seekers must blindly guess the name of the scent their teammate presents them with"
+      "Veto": "Block a single incoming question from a seeker",
+      "Move": "Move to a new hiding spot",
+      "Discard 1, Draw 2": "Discard one card from your hand and draw two new cards",
+      
     };
     let countdownStarted = false;
     let timerInterval;
