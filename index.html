@@ -141,7 +141,7 @@
       "Curse of The Spotty Memory": "For the rest of the run, one random category of questions will be disabled at all times. After this curse is played seeker(s) must roll a die to determine the category of questions to be disabled. The catergy remain disabled until the next question is asked at which point a die is rolled again to choose an e category. The same category can be disabled multiple times in a row",
       "Curse of The Drained Brain": "Choose three questions in different categories. The seekers cannot ask those questions for the rest of the run",
       "Curse of The Ransom Note": "The next question that the seekers ask must be composed using a compilation of photos of the words found in printed material throughout the mall",  
-      "Curse of The Sniff": "Before continueing, the seekers must go to bath and body works and, given two options, one of the seekers must blindly guess the name of the scent their teammate presents them with"
+      "Curse of The Sniff": "Before continueing, the seekers must go to bath and body works and, given two options, one of the seekers must blindly guess the name of the scent their teammate presents them with",
       "Veto": "Block a single incoming question from a seeker",
       "Move": "Move to a new hiding spot",
       "Discard 1, Draw 2": "Discard one card from your hand and draw two new cards",
@@ -253,20 +253,25 @@
     }
 
     function renderHand() {
-      const handDiv = document.getElementById('hand');
-      handDiv.innerHTML = '';
-      hand.forEach((card, index) => {
-        const cardDiv = document.createElement('div');
-        cardDiv.className = 'card';
-        cardDiv.innerHTML = `<div class='card-title'>${card}</div><div class='card-description'>${cardDescriptions[card] || 'No description'}</div>`;
-        const useBtn = document.createElement('button');
-        useBtn.className = 'button';
-        useBtn.innerText = 'Use';
-        useBtn.onclick = () => useCard(index);
-        cardDiv.appendChild(useBtn);
-        handDiv.appendChild(cardDiv);
-      });
+  const handDiv = document.getElementById('hand');
+  handDiv.innerHTML = '';
+  hand.forEach((card, index) => {
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'card';
+    cardDiv.innerHTML = `<div class='card-title'>${card}</div><div class='card-description'>${cardDescriptions[card] || 'No description'}</div>`;
+
+    if (curseCards.includes(card) || actionCards.includes(card)) {
+      const useBtn = document.createElement('button');
+      useBtn.className = 'button';
+      useBtn.innerText = 'Use';
+      useBtn.onclick = () => useCard(index);
+      cardDiv.appendChild(useBtn);
     }
+
+    handDiv.appendChild(cardDiv);
+  });
+}
+
 
     function useCard(index) {
       const cardUsed = hand[index];
