@@ -299,7 +299,7 @@
     renderHand();
     db.ref('usedCard').set({card: cardUsed, targetTeam: targetTeam, timestamp: Date.now()});
     alert(`You used: ${cardUsed} on ${targetTeam}`);
-  } else {
+   else {
     // For non-curse cards, no team targeting needed
     alert(`You used: ${cardUsed}`);
     hand.splice(index, 1);
