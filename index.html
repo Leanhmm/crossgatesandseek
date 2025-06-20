@@ -294,14 +294,7 @@ function useCard(index) {
 }
 
 
-    alert(`You used: ${cardUsed}`);
-    hand.splice(index, 1);
-    db.ref('hand').set(hand);
-    renderHand();
-    db.ref('usedCard').set({card: cardUsed, timestamp: Date.now()});
-  }
-}
-
+    
     function promptTeamSelection(cardUsed, cardIndex) {
   const overlay = document.createElement('div');
   overlay.style.position = 'fixed';
