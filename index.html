@@ -162,10 +162,16 @@
       document.getElementById('seekerPage').style.display = 'block';
       document.getElementById('teamNameDisplay').innerText = team;
 
-      db.ref('usedCard').on('value', snapshot => {
-        const data = snapshot.val();
-        if (data) alert(`The Hiders used a card: ${data.card}`);
-      });
+    db.ref('usedCard').on('value', snapshot => {
+  const data = snapshot.val();
+  if (data) {
+    // If the card has a targetTeam property, notify only if matches this seeker's team
+    if (!data.targetTeam || data.targetTeam === seekerTeam) {
+      alert(`The Hiders used a card: ${data.card}`);
+    }
+  }
+});
+
       db.ref('gameStartTime').on('value', snapshot => {
         const startTime = snapshot.val();
         if (startTime) startTimer(startTime);
@@ -274,13 +280,31 @@
 
 
     function useCard(index) {
-      const cardUsed = hand[index];
-      alert(`You used: ${cardUsed}`);
-      hand.splice(index, 1);
-      db.ref('hand').set(hand);
-      renderHand();
-      db.ref('usedCard').set({card: cardUsed, timestamp: Date.now()});
+  const cardUsed = hand[index];
+  
+  // If it's a curse card, ask which team to target
+  if (curseCards.includes(cardUsed)) {
+    const targetTeam = prompt("Which team should this curse affect? (Team 1, Team 2, Team 3, Team 4)");
+    if (!["Team 1", "Team 2", "Team 3", "Team 4"].includes(targetTeam)) {
+      alert("Invalid team. Card use cancelled.");
+      return; // abort use
     }
+    // Remove card from hand, update db, and set usedCard with target team
+    hand.splice(index, 1);
+    db.ref('hand').set(hand);
+    renderHand();
+    db.ref('usedCard').set({card: cardUsed, targetTeam: targetTeam, timestamp: Date.now()});
+    alert(`You used: ${cardUsed} on ${targetTeam}`);
+  } else {
+    // For non-curse cards, no team targeting needed
+    alert(`You used: ${cardUsed}`);
+    hand.splice(index, 1);
+    db.ref('hand').set(hand);
+    renderHand();
+    db.ref('usedCard').set({card: cardUsed, timestamp: Date.now()});
+  }
+}
+
 
     function askQuestion(index) {
       const templates = [ "Is your nearest ___ the same as my nearest ___?",
