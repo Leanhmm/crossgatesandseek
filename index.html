@@ -46,6 +46,7 @@
     <h1>Hide and Seek: Crossgates Edition</h1>
     <button class="button" onclick="goToRole('hider')">I'm a Hider</button>
     <button class="button" onclick="goToRole('seeker')">I'm a Seeker</button>
+    <button class="button" onclick="resetGame()">Reset Game</button>
   </div>
 
   <div id="hiderPage" style="display: none;">
@@ -81,7 +82,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const hand = [];
+    let hand = [];
     const allCards = ["Curse of The Animal Love",
       "Curse of The Bestest Builder",
       "Curse of The Middle School Boy",
@@ -98,8 +99,8 @@
       "Curse of The Spotty Memory",
       "Curse of The Drained Brain",
       "Curse of The Ransom Note",
-      "Curse of The Sniff"];
-    const cardDescriptions = { "Curse of The Animal Love": "Seekers must take a photo of them petting an animal",
+      "Curse of The Sniff"]; // Same as before
+    const cardDescriptions = {"Curse of The Animal Love": "Seekers must take a photo of them petting an animal",
       "Curse of The Bestest Builder": "Seekers must purchase and complete a lego set, and send a photo of the lego set to the seekers before continueing their search",
       "Curse of The Middle School Boy": "Seekers must successfully flip a water bottle, having it land right side up, three times consecutively before continuing their search",
       "Curse of The Prettiest Princess": "Before asking another question, one team member must try on a very pretty clothing item and send a photo to the other team",
@@ -115,7 +116,7 @@
       "Curse of The Spotty Memory": "For the rest of the run, one random category of questions will be disabled at all times. After this curse is played seeker(s) must roll a die to determine the category of questions to be disabled. The catergy remain disabled until the next question is asked at which point a die is rolled again to choose an e category. The same category can be disabled multiple times in a row",
       "Curse of The Drained Brain": "Choose three questions in different categories. The seekers cannot ask those questions for the rest of the run",
       "Curse of The Ransom Note": "The next question that the seekers ask must be composed using a compilation of photos of the words found in printed material throughout the mall",  
-      "Curse of The Sniff": "Before continueing, the seekers must go to bath and body works and, given two options, one of the seekers must blindly guess the name of the scent their teammate presents them with"};
+      "Curse of The Sniff": "Before continueing, the seekers must go to bath and body works and, given two options, one of the seekers must blindly guess the name of the scent their teammate presents them with"}; // Same as before
     let countdownStarted = false;
     let timerInterval;
 
@@ -123,6 +124,14 @@
       document.getElementById('main').style.display = 'none';
       if (role === 'hider') {
         document.getElementById('hiderPage').style.display = 'block';
+        db.ref('hand').on('value', snapshot => {
+          hand = snapshot.val() || [];
+          renderHand();
+        });
+        db.ref('gameStartTime').once('value').then(snapshot => {
+          const startTime = snapshot.val();
+          if (startTime) startTimer(startTime);
+        });
       } else if (role === 'seeker') {
         document.getElementById('seekerPage').style.display = 'block';
         db.ref('usedCard').on('value', snapshot => {
@@ -142,6 +151,17 @@
       startTimer(startTime);
     }
 
+    function resetGame() {
+      db.ref().set({});
+      hand = [];
+      renderHand();
+      clearInterval(timerInterval);
+      document.querySelectorAll('#timerDisplay').forEach(el => el.innerText = '');
+      document.getElementById('main').style.display = 'block';
+      document.getElementById('hiderPage').style.display = 'none';
+      document.getElementById('seekerPage').style.display = 'none';
+    }
+
     function startTimer(startTime) {
       if (countdownStarted) return;
       countdownStarted = true;
@@ -150,7 +170,7 @@
         const now = Date.now();
         const elapsed = now - startTime;
         const countdownLimit = 10 * 60 * 1000;
-        let text = elapsed < countdownLimit ? `Countdown: ${formatTime(countdownLimit - elapsed)}` : `Overtime: ${formatTime(elapsed - countdownLimit)}`;
+        let text = elapsed < countdownLimit ? `Countdown: ${formatTime(countdownLimit - elapsed)}` : `Time: ${formatTime(elapsed - countdownLimit)}`;
         document.querySelectorAll('#timerDisplay').forEach(el => el.innerText = text);
       }, 1000);
     }
@@ -165,6 +185,7 @@
     function drawCard() {
       const card = allCards[Math.floor(Math.random() * allCards.length)];
       hand.push(card);
+      db.ref('hand').set(hand);
       renderHand();
     }
 
@@ -178,6 +199,7 @@
         btn.className = 'button';
         btn.onclick = () => {
           hand.push(card);
+          db.ref('hand').set(hand);
           renderHand();
           chooser.remove();
         };
@@ -206,12 +228,13 @@
       const cardUsed = hand[index];
       alert(`You used: ${cardUsed}`);
       hand.splice(index, 1);
+      db.ref('hand').set(hand);
       renderHand();
       db.ref('usedCard').set({card: cardUsed, timestamp: Date.now()});
     }
 
     function askQuestion(index) {
-      const templates = [ "Is your nearest ___ the same as my nearest ___?",
+      const templates = ["Is your nearest ___ the same as my nearest ___?",
       "Notify the hiders that you are starting a thermometer. Once they respond, you have 30 seconds to move. The Hiders must then state if you are hotter or colder.",
       "Out of all the ___ places within five stores of the seekers, which are the hiders closest to?",
       "Take a photo of ___"];
