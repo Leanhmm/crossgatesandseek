@@ -38,6 +38,24 @@
       font-weight: bold;
     }
   </style>
+  <!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+ apiKey: "AIzaSyBloy0c-h2PXGMJrsY83w9e3wsG9W7lOf8",
+  authDomain: "crossgatesandseek.firebaseapp.com",
+  projectId: "crossgatesandseek",
+  storageBucket: "crossgatesandseek.firebasestorage.app",
+  messagingSenderId: "206267305832",
+  appId: "1:206267305832:web:2468181e03cf53a30790dd",
+  measurementId: "G-WJB3HM0GNP"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+</script>
+
 </head>
 <body>
   <div id="main">
@@ -106,14 +124,23 @@
 
     const hand = [];
 
-    function goToRole(role) {
-      document.getElementById('main').style.display = 'none';
-      if (role === 'hider') {
-        document.getElementById('hiderPage').style.display = 'block';
-      } else if (role === 'seeker') {
-        document.getElementById('seekerPage').style.display = 'block';
+   function goToRole(role) {
+  document.getElementById('main').style.display = 'none';
+  if (role === 'hider') {
+    document.getElementById('hiderPage').style.display = 'block';
+  } else if (role === 'seeker') {
+    document.getElementById('seekerPage').style.display = 'block';
+
+    // 👂 Listen for card usage
+    db.ref('usedCard').on('value', snapshot => {
+      const data = snapshot.val();
+      if (data) {
+        alert(`The Hiders used a card: ${data.card}`);
       }
-    }
+    });
+  }
+}
+
 
     function drawCard() {
       const card = getRandomCard();
@@ -167,11 +194,17 @@
     }
 
     function useCard(index) {
-      alert(`You used: ${hand[index]}`);
-      hand.splice(index, 1);
-      renderHand();
-    }
+  const cardUsed = hand[index];
+  alert(`You used: ${cardUsed}`);
+  hand.splice(index, 1);
+  renderHand();
 
+  // 🔥 Send to Firebase
+  db.ref('usedCard').set({
+    card: cardUsed,
+    timestamp: Date.now()
+  });
+}
     const questionTemplates = [
       "Is your nearest ___ the same as my nearest ___?",
       "Notify the hiders that you are starting a thermometer. Once they respond, you have 30 seconds to move. The Hiders must then state if you are hotter or colder.",
