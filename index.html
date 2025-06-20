@@ -149,7 +149,7 @@
       timerInterval = setInterval(() => {
         const now = Date.now();
         const elapsed = now - startTime;
-        const countdownLimit = 12 * 60 * 1000;
+        const countdownLimit = 10 * 60 * 1000;
         let text = elapsed < countdownLimit ? `Countdown: ${formatTime(countdownLimit - elapsed)}` : `Overtime: ${formatTime(elapsed - countdownLimit)}`;
         document.querySelectorAll('#timerDisplay').forEach(el => el.innerText = text);
       }, 1000);
