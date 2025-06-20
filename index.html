@@ -240,7 +240,7 @@
     }
 
     function drawThreeChooseOne() {
-      const cards = [allCards[0], allCards[1], allCards[2]];
+      const cards = [allCards[Math.floor(Math.random() * allCards.length)]], allCards[Math.floor(Math.random() * allCards.length)]], allCards[Math.floor(Math.random() * allCards.length)]]];
       const chooser = document.createElement('div');
       chooser.innerHTML = '<h3>Choose one card:</h3>';
       cards.forEach(card => {
