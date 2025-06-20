@@ -293,14 +293,7 @@ function useCard(index) {
   }
 }
 
-    // Remove card from hand, update db, and set usedCard with target team
-    hand.splice(index, 1);
-    db.ref('hand').set(hand);
-    renderHand();
-    db.ref('usedCard').set({card: cardUsed, targetTeam: targetTeam, timestamp: Date.now()});
-    alert(`You used: ${cardUsed} on ${targetTeam}`);
-   else {
-    // For non-curse cards, no team targeting needed
+
     alert(`You used: ${cardUsed}`);
     hand.splice(index, 1);
     db.ref('hand').set(hand);
