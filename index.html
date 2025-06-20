@@ -45,8 +45,16 @@
   <div id="main">
     <h1>Hide and Seek: Crossgates Edition</h1>
     <button class="button" onclick="goToRole('hider')">I'm a Hider</button>
-    <button class="button" onclick="goToRole('seeker')">I'm a Seeker</button>
+    <button class="button" onclick="showSeekerTeams()">I'm a Seeker</button>
     <button class="button" onclick="resetGame()">Reset Game</button>
+  </div>
+
+  <div id="seekerTeamSelect" style="display: none;">
+    <h2>Select Your Seeker Team</h2>
+    <button class="button" onclick="joinSeekerTeam('Team 1')">Team 1</button>
+    <button class="button" onclick="joinSeekerTeam('Team 2')">Team 2</button>
+    <button class="button" onclick="joinSeekerTeam('Team 3')">Team 3</button>
+    <button class="button" onclick="joinSeekerTeam('Team 4')">Team 4</button>
   </div>
 
   <div id="hiderPage" style="display: none;">
@@ -60,7 +68,7 @@
   </div>
 
   <div id="seekerPage" style="display: none;">
-    <h2>Seeker Mode</h2>
+    <h2>Seeker Mode - <span id="teamNameDisplay"></span></h2>
     <button class="button" onclick="askQuestion(0)">Question 1</button>
     <button class="button" onclick="askQuestion(1)">Question 2</button>
     <button class="button" onclick="askQuestion(2)">Question 3</button>
@@ -74,7 +82,7 @@
       apiKey: "AIzaSyBloy0c-h2PXGMJrsY83w9e3wsG9W7lOf8",
       authDomain: "crossgatesandseek.firebaseapp.com",
       projectId: "crossgatesandseek",
-      storageBucket: "crossgatesandseek.firebasestorage.app",
+      storageBucket: "crossgatesandseek.appspot.com",
       messagingSenderId: "206267305832",
       appId: "1:206267305832:web:2468181e03cf53a30790dd",
       measurementId: "G-WJB3HM0GNP"
@@ -99,8 +107,9 @@
       "Curse of The Spotty Memory",
       "Curse of The Drained Brain",
       "Curse of The Ransom Note",
-      "Curse of The Sniff"]; // Same as before
-    const cardDescriptions = {"Curse of The Animal Love": "Seekers must take a photo of them petting an animal",
+      "Curse of The Sniff"];
+    const cardDescriptions = {
+       "Curse of The Animal Love": "Seekers must take a photo of them petting an animal",
       "Curse of The Bestest Builder": "Seekers must purchase and complete a lego set, and send a photo of the lego set to the seekers before continueing their search",
       "Curse of The Middle School Boy": "Seekers must successfully flip a water bottle, having it land right side up, three times consecutively before continuing their search",
       "Curse of The Prettiest Princess": "Before asking another question, one team member must try on a very pretty clothing item and send a photo to the other team",
@@ -116,9 +125,32 @@
       "Curse of The Spotty Memory": "For the rest of the run, one random category of questions will be disabled at all times. After this curse is played seeker(s) must roll a die to determine the category of questions to be disabled. The catergy remain disabled until the next question is asked at which point a die is rolled again to choose an e category. The same category can be disabled multiple times in a row",
       "Curse of The Drained Brain": "Choose three questions in different categories. The seekers cannot ask those questions for the rest of the run",
       "Curse of The Ransom Note": "The next question that the seekers ask must be composed using a compilation of photos of the words found in printed material throughout the mall",  
-      "Curse of The Sniff": "Before continueing, the seekers must go to bath and body works and, given two options, one of the seekers must blindly guess the name of the scent their teammate presents them with"}; // Same as before
+      "Curse of The Sniff": "Before continueing, the seekers must go to bath and body works and, given two options, one of the seekers must blindly guess the name of the scent their teammate presents them with"
+    };
     let countdownStarted = false;
     let timerInterval;
+    let seekerTeam = null;
+
+    function showSeekerTeams() {
+      document.getElementById('main').style.display = 'none';
+      document.getElementById('seekerTeamSelect').style.display = 'block';
+    }
+
+    function joinSeekerTeam(team) {
+      seekerTeam = team;
+      document.getElementById('seekerTeamSelect').style.display = 'none';
+      document.getElementById('seekerPage').style.display = 'block';
+      document.getElementById('teamNameDisplay').innerText = team;
+
+      db.ref('usedCard').on('value', snapshot => {
+        const data = snapshot.val();
+        if (data) alert(`The Hiders used a card: ${data.card}`);
+      });
+      db.ref('gameStartTime').on('value', snapshot => {
+        const startTime = snapshot.val();
+        if (startTime) startTimer(startTime);
+      });
+    }
 
     function goToRole(role) {
       document.getElementById('main').style.display = 'none';
@@ -129,16 +161,6 @@
           renderHand();
         });
         db.ref('gameStartTime').once('value').then(snapshot => {
-          const startTime = snapshot.val();
-          if (startTime) startTimer(startTime);
-        });
-      } else if (role === 'seeker') {
-        document.getElementById('seekerPage').style.display = 'block';
-        db.ref('usedCard').on('value', snapshot => {
-          const data = snapshot.val();
-          if (data) alert(`The Hiders used a card: ${data.card}`);
-        });
-        db.ref('gameStartTime').on('value', snapshot => {
           const startTime = snapshot.val();
           if (startTime) startTimer(startTime);
         });
@@ -156,10 +178,12 @@
       hand = [];
       renderHand();
       clearInterval(timerInterval);
+      countdownStarted = false;
       document.querySelectorAll('#timerDisplay').forEach(el => el.innerText = '');
       document.getElementById('main').style.display = 'block';
       document.getElementById('hiderPage').style.display = 'none';
       document.getElementById('seekerPage').style.display = 'none';
+      document.getElementById('seekerTeamSelect').style.display = 'none';
     }
 
     function startTimer(startTime) {
@@ -169,7 +193,7 @@
       timerInterval = setInterval(() => {
         const now = Date.now();
         const elapsed = now - startTime;
-        const countdownLimit = 10 * 60 * 1000;
+        const countdownLimit = 12 * 60 * 1000;
         let text = elapsed < countdownLimit ? `Countdown: ${formatTime(countdownLimit - elapsed)}` : `Time: ${formatTime(elapsed - countdownLimit)}`;
         document.querySelectorAll('#timerDisplay').forEach(el => el.innerText = text);
       }, 1000);
@@ -190,7 +214,7 @@
     }
 
     function drawThreeChooseOne() {
-      const cards = [allCards[0], allCards[1], allCards[0]];
+      const cards = [allCards[0], allCards[1], allCards[2]];
       const chooser = document.createElement('div');
       chooser.innerHTML = '<h3>Choose one card:</h3>';
       cards.forEach(card => {
@@ -234,7 +258,7 @@
     }
 
     function askQuestion(index) {
-      const templates = ["Is your nearest ___ the same as my nearest ___?",
+      const templates = [ "Is your nearest ___ the same as my nearest ___?",
       "Notify the hiders that you are starting a thermometer. Once they respond, you have 30 seconds to move. The Hiders must then state if you are hotter or colder.",
       "Out of all the ___ places within five stores of the seekers, which are the hiders closest to?",
       "Take a photo of ___"];
