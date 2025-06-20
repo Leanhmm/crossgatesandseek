@@ -279,20 +279,20 @@
 }
 
 
-    function useCard(index) {
+function useCard(index) {
   const cardUsed = hand[index];
-  
-  // If it's a curse card, ask which team to target
+
   if (curseCards.includes(cardUsed)) {
-   promptTeamSelection(cardUsed, index);
+    promptTeamSelection(cardUsed, index);
   } else {
     alert(`You used: ${cardUsed}`);
-    hand.splice(index,1);
+    hand.splice(index, 1);
     db.ref('hand').set(hand);
     renderHand();
     db.ref('usedCard').set({card: cardUsed, timestamp: Date.now()});
   }
-    }
+}
+
     // Remove card from hand, update db, and set usedCard with target team
     hand.splice(index, 1);
     db.ref('hand').set(hand);
@@ -310,56 +310,56 @@
 }
 
     function promptTeamSelection(cardUsed, cardIndex) {
-      const overlay = document.createElement('div');
-      overlay.style.postion = 'fixed';
-      overlay.style.top = 0;
-      overlay.style.left = 0;
-      overlay.style.width = '100%';
-      overlay.style.height = '100%';
-      overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
-      overlay.style.display = 'flex';
-      overlay.style.justifyContent = 'center';
-      overlay.style.alignItems = 'center';
-      overlay.style.zIndex = 1000;
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed';
+  overlay.style.top = 0;
+  overlay.style.left = 0;
+  overlay.style.width = '100%';
+  overlay.style.height = '100%';
+  overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+  overlay.style.display = 'flex';
+  overlay.style.justifyContent = 'center';
+  overlay.style.alignItems = 'center';
+  overlay.style.zIndex = 1000;
 
-      const dialog = document.createElement('div');
-      dialog.style.background = 'white';
-      dialog.style.padding = '20px';
-      dialog.style.borderRadius = '8px';
-      dialog.style.textAlign = 'center';
-      dialog.style.minWidth = '250px';
+  const dialog = document.createElement('div');
+  dialog.style.background = 'white';
+  dialog.style.padding = '20px';
+  dialog.style.borderRadius = '8px';
+  dialog.style.textAlign = 'center';
+  dialog.style.minWidth = '250px';
+  dialog.innerHTML = `<h3>Select a team for "${cardUsed}"</h3>`;
 
-      dialog.innerHTML = `<h3>Select a team for "${cardUsed}"</h3>`;
+  ['Team 1', 'Team 2', 'Team 3', 'Team 4'].forEach(team => {
+    const btn = document.createElement('button');
+    btn.innerText = team;
+    btn.className = 'button';
+    btn.style.margin = '5px';
+    btn.onclick = () => {
+      hand.splice(cardIndex, 1);
+      db.ref('hand').set(hand);
+      renderHand();
+      db.ref('usedCard').set({card: cardUsed, targetTeam: team, timestamp: Date.now()});
+      alert(`You used: ${cardUsed} on ${team}`);
+      document.body.removeChild(overlay);
+    };
+    dialog.appendChild(btn);
+  });
 
-      ['Team 1', 'Team 2', 'Team 3', 'Team 4'].forEach(team => {
-        const btn = document.createElement('button');
-        btn.innerText = team;
-        btn.className = 'button';
-        btn.style.margin = '5px';
-        btn.onclick = () => {
-          hand.splice(cardIndex, 1);
-          db.ref('hand').set(hand);
-          renderHand();
-          db.ref('usedCard'.set({card: cardUsed, targetTeam: team, timestamp:
-          alert(`You used: ${cardUsed} on ${team}`);
-          document.body.removeChild(overlay);
-        };
-        dialog.appendChild(btn);
-      });
+  const cancelBtn = document.createElement('button');
+  cancelBtn.innerText = 'Cancel';
+  cancelBtn.className = 'button';
+  cancelBtn.style.marginTop = '15px';
+  cancelBtn.onclick = () => {
+    document.body.removeChild(overlay);
+  };
+  dialog.appendChild(document.createElement('br'));
+  dialog.appendChild(cancelBtn);
 
-      const cancelBtn = document.createElement('button');
-      cancelBtn.innerText = 'Cancel';
-      cancelBtn.className = 'button';
-      cancelBtn.style.marginTop = '15px';
-      cancelBtn.onclick = () => {
-        document.body.removeChild(overlay);
-      };
-      dialog.appendChild(document.createElement('br'));
-      dialog.appendChild(cancelBtn);
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+}
 
-      overlay.appendChild(dialog);
-      document.body.appendChild(overlay);
-    }
 
     function askQuestion(index) {
       const templates = [ "Is your nearest ___ the same as my nearest ___?",
